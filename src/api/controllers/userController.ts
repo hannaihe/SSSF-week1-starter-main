@@ -7,7 +7,7 @@ import {
 } from '../models/userModel';
 import {Request, Response, NextFunction} from 'express';
 import CustomError from '../../classes/CustomError';
-import bcrypt from 'bcryptjs';
+import bcrypt, {hash} from 'bcryptjs';
 import {User} from '../../types/DBTypes';
 import {MessageResponse} from '../../types/MessageTypes';
 import {validationResult} from 'express-validator';
@@ -49,11 +49,12 @@ const userGet = async (
 // userPost should use bcrypt to hash password
 
 const userPost = async (
-  req: Request<{}, {}, User>,
+  req: Request<{}, {}, Omit<User, 'user_id'>>,
   res: Response<MessageResponse>,
   next: NextFunction
 ) => {
   const errors = validationResult(req);
+
   if (!errors.isEmpty()) {
     const messages: string = errors
       .array()
@@ -63,15 +64,14 @@ const userPost = async (
     return;
   }
 
-  try {
-    const userData = req.body;
-    const hashedPassword = bcrypt.hashSync(userData.password, salt);
-    const newUser = {...userData, password: hashedPassword};
-    const result = await addUser(newUser);
-    res.json(result);
-  } catch (error) {
-    next(error);
+  if (req.body.password.length < 5) {
+    next(new CustomError('Invalid password length', 400));
   }
+
+  const password = await hash(req.body.password, salt);
+
+  const result = await addUser({...req.body, password});
+  res.json(result);
 };
 
 const userPut = async (

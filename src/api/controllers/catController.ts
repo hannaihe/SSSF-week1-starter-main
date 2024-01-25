@@ -39,7 +39,11 @@ const catGet = async (req: Request, res: Response<Cat>, next: NextFunction) => {
   try {
     const id = Number(req.params.id);
     const cat = await getCat(id);
-    res.json(cat);
+    if (cat) {
+      res.json(cat);
+      return;
+    }
+    next(new CustomError('Cat not found', 400));
   } catch (error) {
     next(error);
   }
@@ -64,11 +68,15 @@ const catPost = async (
   try {
     const catData = {
       ...req.body,
-      owner: req.user?.user_id || req.body.owner, // Use user_id from req.user if available
+      lat: res.locals.coords[0],
+      lng: res.locals.coords[1],
+      filename: req.file?.filename || '',
     };
 
     const result = await addCat(catData);
-    res.json(result);
+    if (result) {
+      res.json(result);
+    }
   } catch (error) {
     next(error);
   }

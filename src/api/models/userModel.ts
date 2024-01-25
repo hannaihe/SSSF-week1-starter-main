@@ -34,17 +34,21 @@ const getUser = async (userId: number): Promise<User> => {
 
 // TODO: create addUser function
 
-const addUser = async (user: Partial<User>): Promise<MessageResponse> => {
+const addUser = async (
+  user: Omit<User, 'user_id'>
+): Promise<MessageResponse> => {
   const [headers] = await promisePool.execute<ResultSetHeader>(
     `
-    INSERT INTO sssf_user (user_name, email, password, role) 
-    VALUES (?, ?, ?, ?)
-    `,
-    [user.user_name, user.email, user.password, user.role]
+      INSERT INTO sssf_user (user_name, email, role, password) 
+      VALUES (?, ?, ?, ?);
+      `,
+    [user.user_name, user.email, 'user', user.password]
   );
+
   if (headers.affectedRows === 0) {
     throw new CustomError('No users added', 400);
   }
+
   return {message: 'User added'};
 };
 

@@ -34,6 +34,20 @@ const getUser = async (userId: number): Promise<User> => {
 
 // TODO: create addUser function
 
+const addUser = async (user: Partial<User>): Promise<MessageResponse> => {
+  const [headers] = await promisePool.execute<ResultSetHeader>(
+    `
+    INSERT INTO sssf_user (user_name, email, password, role) 
+    VALUES (?, ?, ?, ?)
+    `,
+    [user.user_name, user.email, user.password, user.role]
+  );
+  if (headers.affectedRows === 0) {
+    throw new CustomError('No users added', 400);
+  }
+  return {message: 'User added'};
+};
+
 const updateUser = async (
   data: Partial<User>,
   userId: number
@@ -50,6 +64,20 @@ const updateUser = async (
 };
 
 // TODO: create deleteUser function
+
+const deleteUser = async (userId: number): Promise<MessageResponse> => {
+  const [headers] = await promisePool.execute<ResultSetHeader>(
+    `
+    DELETE FROM sssf_user 
+    WHERE user_id = ?;
+    `,
+    [userId]
+  );
+  if (headers.affectedRows === 0) {
+    throw new CustomError('No users deleted', 400);
+  }
+  return {message: 'User deleted'};
+};
 
 const getUserLogin = async (email: string): Promise<User> => {
   const [rows] = await promisePool.execute<RowDataPacket[] & User[]>(

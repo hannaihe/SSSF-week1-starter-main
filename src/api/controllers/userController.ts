@@ -48,6 +48,32 @@ const userGet = async (
 // - password should be at least 5 characters long
 // userPost should use bcrypt to hash password
 
+const userPost = async (
+  req: Request<{}, {}, User>,
+  res: Response<MessageResponse>,
+  next: NextFunction
+) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const messages: string = errors
+      .array()
+      .map((error) => `${error.msg}: ${error.param}`)
+      .join(', ');
+    next(new CustomError(messages, 400));
+    return;
+  }
+
+  try {
+    const userData = req.body;
+    const hashedPassword = bcrypt.hashSync(userData.password, salt);
+    const newUser = {...userData, password: hashedPassword};
+    const result = await addUser(newUser);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
 const userPut = async (
   req: Request<{id: number}, {}, User>,
   res: Response<MessageResponse>,
@@ -83,16 +109,75 @@ const userPut = async (
 // userPutCurrent should use updateUser function from userModel
 // userPutCurrent should use validationResult to validate req.body
 
+const userPutCurrent = async (
+  req: Request,
+  res: Response<MessageResponse>,
+  next: NextFunction
+) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const messages: string = errors
+      .array()
+      .map((error) => `${error.msg}: ${error.param}`)
+      .join(', ');
+    next(new CustomError(messages, 400));
+    return;
+  }
+
+  try {
+    if (!req.user?.user_id) {
+      throw new CustomError('No user', 400);
+    }
+
+    const updatedUserData = req.body;
+    const result = await updateUser(updatedUserData, req.user.user_id);
+
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
 // TODO: create userDelete function for admin to delete user by id
 // userDelete should use deleteUser function from userModel
 // userDelete should use validationResult to validate req.params.id
 // userDelete should use req.user to get role
+
+const userDelete = async (
+  req: Request<{id: number}>,
+  res: Response<MessageResponse>,
+  next: NextFunction
+) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const messages: string = errors
+      .array()
+      .map((error) => `${error.msg}: ${error.param}`)
+      .join(', ');
+    next(new CustomError(messages, 400));
+    return;
+  }
+
+  try {
+    if (!req.user?.role || req.user.role !== 'admin') {
+      throw new CustomError('Admin only', 403);
+    }
+
+    const userId = req.params.id;
+    const result = await deleteUser(userId);
+
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+};
 
 const userDeleteCurrent = async (
   req: Request,
   res: Response<MessageResponse>,
   next: NextFunction
 ) => {
+  const errors = validationResult(req);
   if (!errors.isEmpty()) {
     const messages: string = errors
       .array()
